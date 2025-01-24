@@ -19,13 +19,14 @@ package com.alibaba.nacos.client.config.impl;
 import com.alibaba.nacos.api.PropertyKeyConst;
 import com.alibaba.nacos.api.common.Constants;
 import com.alibaba.nacos.api.exception.NacosException;
+import com.alibaba.nacos.client.env.NacosClientProperties;
 import com.alibaba.nacos.plugin.auth.api.RequestResource;
 import com.alibaba.nacos.client.config.filter.impl.ConfigResponse;
 import com.alibaba.nacos.client.security.SecurityProxy;
-import com.alibaba.nacos.client.utils.ParamUtil;
 import com.alibaba.nacos.common.utils.ConvertUtils;
 import com.alibaba.nacos.common.utils.MD5Utils;
 import com.alibaba.nacos.common.utils.StringUtils;
+import com.alibaba.nacos.client.utils.ParamUtil;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -52,7 +53,7 @@ public abstract class ConfigTransportClient {
     
     ScheduledExecutorService executor;
     
-    final ServerListManager serverListManager;
+    final ConfigServerListManager serverListManager;
     
     final Properties properties;
     
@@ -66,7 +67,7 @@ public abstract class ConfigTransportClient {
         securityProxy.shutdown();
     }
     
-    public ConfigTransportClient(Properties properties, ServerListManager serverListManager) {
+    public ConfigTransportClient(NacosClientProperties properties, ConfigServerListManager serverListManager) {
         
         String encodeTmp = properties.getProperty(PropertyKeyConst.ENCODE);
         if (StringUtils.isBlank(encodeTmp)) {
@@ -77,8 +78,8 @@ public abstract class ConfigTransportClient {
         
         this.tenant = properties.getProperty(PropertyKeyConst.NAMESPACE);
         this.serverListManager = serverListManager;
-        this.properties = properties;
-        this.securityProxy = new SecurityProxy(serverListManager.getServerUrls(),
+        this.properties = properties.asProperties();
+        this.securityProxy = new SecurityProxy(serverListManager,
                 ConfigHttpClientManager.getInstance().getNacosRestTemplate());
     }
     
@@ -104,7 +105,7 @@ public abstract class ConfigTransportClient {
      * @return headers.
      */
     protected Map<String, String> getCommonHeader() {
-        Map<String, String> headers = new HashMap<String, String>(16);
+        Map<String, String> headers = new HashMap<>(16);
         
         String ts = String.valueOf(System.currentTimeMillis());
         String token = MD5Utils.md5Hex(ts + ParamUtil.getAppKey(), Constants.ENCODE);
@@ -133,6 +134,10 @@ public abstract class ConfigTransportClient {
         this.executor.scheduleWithFixedDelay(() -> securityProxy.login(properties), 0,
                 this.securityInfoRefreshIntervalMills, TimeUnit.MILLISECONDS);
         startInternal();
+    }
+    
+    public void reLogin() {
+        securityProxy.reLogin();
     }
     
     /**
@@ -174,8 +179,10 @@ public abstract class ConfigTransportClient {
     
     /**
      * listen change .
+     *
+     * @throws NacosException nacos exception throws, should retry.
      */
-    public abstract void executeConfigListen();
+    public abstract void executeConfigListen() throws NacosException;
     
     /**
      * remove cache implements.

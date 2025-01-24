@@ -35,6 +35,8 @@ public class Constants {
         
         public static final String JM_SNAPSHOT_PATH = "JM.SNAPSHOT.PATH";
         
+        public static final String NACOS_ENV_FIRST = "nacos.env.first";
+        
     }
     
     public static class Disk {
@@ -55,6 +57,13 @@ public class Constants {
     
         public static final long SECURITY_INFO_REFRESH_INTERVAL_MILLS = TimeUnit.SECONDS.toMillis(5);
         
+    }
+    
+    public static class Address {
+        
+        public static final int ENDPOINT_SERVER_LIST_PROVIDER_ORDER = 500;
+        
+        public static final int ADDRESS_SERVER_LIST_PROVIDER_ORDER = 499;
     }
     
 }
